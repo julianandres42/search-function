@@ -1,50 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CodePipeline with GitHub, CodeBuild (exercise-codebuild), and CloudFormation for Lambda deployment'
+
 Parameters:
   ConnectionArn:
-    Description: The CodeConnections ARN for your source repository.
+    Description: The CodeConnections Connection ARN from Settings > Connections.
     Type: String
   FullRepositoryId:
-    Description: The full repository ID to use with your CodeConnections connection.
+    Description: Your GitHub repository ID. Example: julianandres42/search-function
     Type: String
   BranchName:
-    Description: The branch name to use with your CodeConnections connection.
+    Description: The branch name that will trigger the pipeline execution automatically.
     Type: String
+    Default: main
   CodePipelineName:
-    Description: The CodePipeline pipeline name that will deploy to your CloudFormation stack.
+    Description: Name for this specific deployment pipeline.
     Type: String
     Default: DeployToCloudFormationService
   StackName:
-    Description: The CloudFormation stack name that you want to create or update.
+    Description: The CloudFormation stack name that will create or update your Lambda function.
     Type: String
   TemplatePath:
-    Description: The path in your source repository to the CloudFormation template file to create or update your stack.
+    Description: The filename of the CloudFormation infrastructure template inside your repository.
     Type: String
-  OutputFileName:
-    Description: The path the output from the CloudFormation stack update will be written to.
-    Type: String
-    Default: output.json
+    Default: template.yml
   CloudFormationResourcePermissions:
-    Description: The permission required by CloudFormation to make resource calls on your behalf.
+    Description: The IAM Role ARN that CloudFormation will assume to provision resources (S3, Lambda, etc.).
     Type: String
-  RetentionPolicy:
-    Description: Define if you'd like the resource retained or deleted when the
-      CloudFormation stack is deleted.
-    Type: String
-    Default: Delete
-    AllowedValues:
-      - Delete
-      - Retain
-  TemplateConfiguration:
-    Description: The path to a template configuration file containing parameter values and stack policy for creating or updating your stack.
-    Type: String
-    Default: ''
-  ParameterOverrides:
-    Description: A JSON string to provide parameter values that override defaults in the template or TemplateConfiguration file.
-    Type: String
-    Default: ''
-Conditions:
-  HasTemplateConfiguration: !Not [!Equals ['', !Ref TemplateConfiguration]]
-  HasParameterOverrides: !Not [!Equals ['', !Ref ParameterOverrides]]
+
 Resources:
+  # S3 Bucket to store the intermediate pipeline artifacts
+  CodePipelineArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+
+  # Pipeline Definition
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -56,6 +47,7 @@ Resources:
       PipelineType: V2
       RoleArn: !GetAtt CodePipelineRole.Arn
       Stages:
+        # Stage 1: Source (Downloads code from your GitHub repository)
         - Name: Source
           Actions:
             - Name: CodeConnections
@@ -72,8 +64,25 @@ Resources:
                 - Name: SourceOutput
               RoleArn: !GetAtt CodePipelineSourceActionRole.Arn
               RunOrder: 1
-          OnFailure:
-            Result: RETRY
+
+        # Stage 2: Build (Utilizes your existing 'exercise-codebuild' project)
+        - Name: Build
+          Actions:
+            - Name: CodeBuild
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: exercise-codebuild  # <-- Integrated your exact project name
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+
+        # Stage 3: Deploy (Applies step 4 instructions: Required IAM capabilities)
         - Name: Deploy
           Actions:
             - Name: CloudFormation
@@ -84,291 +93,84 @@ Resources:
                 Version: '1'
               Configuration:
                 ActionMode: CREATE_UPDATE
+                # Explicitly defining the required security and IAM capabilities from step 4
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
-                TemplatePath: !Sub SourceOutput::${TemplatePath}
-                RoleArn: !GetAtt CloudFormationRole.Arn
-                OutputFileName: !Ref OutputFileName
-                TemplateConfiguration:
-                  !If [HasTemplateConfiguration, !Sub "SourceOutput::${TemplateConfiguration}", !Ref "AWS::NoValue"]
-                ParameterOverrides:
-                  !If [HasParameterOverrides, !Ref ParameterOverrides, !Ref "AWS::NoValue"]
+                # Looks for the packaged infrastructure template emitted by CodeBuild
+                TemplatePath: !Sub BuildOutput::${TemplatePath}
+                RoleArn: !Ref CloudFormationResourcePermissions
               InputArtifacts:
-                - Name: SourceOutput
-              OutputArtifacts:
-                - Name: DeployOutput
-              RoleArn: !GetAtt CodePipelineDeployActionRole.Arn
+                - Name: BuildOutput
               RunOrder: 1
-          OnFailure:
-            Result: ROLLBACK
-          BeforeEntry:
-            Conditions:
-              - Result: FAIL
-                Rules:
-                  - Name: MyDeploymentWindowRule
-                    RuleTypeId:
-                      Category: Rule
-                      Owner: AWS
-                      Provider: DeploymentWindow
-                      Version: '1'
-                    Configuration:
-                      Cron: '* * * * * ? *'
-                      TimeZone: 'PST'
     DependsOn:
       - CodePipelineRoleDefaultPolicy
+
+  # --- Security Roles and IAM Policies ---
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Action: sts:AssumeRole
             Effect: Allow
             Principal:
-              Service: codepipeline.amazonaws.com
-        Version: '2012-10-17'
+              Service: ://amazonaws.com
+
   CodePipelineRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
+      PolicyName: CodePipelineRoleDefaultPolicy
+      Roles:
+        - !Ref CodePipelineRole
       PolicyDocument:
+        Version: '2012-10-17'
         Statement:
-          - Action:
+          - Effect: Allow
+            Action:
               - s3:Abort*
               - s3:DeleteObject*
               - s3:GetBucket*
               - s3:GetObject*
               - s3:List*
-              - s3:PutObject
-              - s3:PutObjectLegalHold
-              - s3:PutObjectRetention
-              - s3:PutObjectTagging
-              - s3:PutObjectVersionTagging
-            Effect: Allow
+              - s3:PutObject*
             Resource:
               - !GetAtt CodePipelineArtifactsBucket.Arn
-              - !Join
-                - '/'
-                - - !GetAtt CodePipelineArtifactsBucket.Arn
-                  - '*'
-          - Action:
-              - s3:PutObjectAcl
-              - s3:PutObjectVersionAcl
-            Effect: Allow
-            Resource: !Join
-              - /
-              - - !GetAtt CodePipelineArtifactsBucket.Arn
-                - '*'
-          - Action: sts:AssumeRole
-            Effect: Allow
+              - !Sub ${CodePipelineArtifactsBucket.Arn}/*
+          - Effect: Allow
+            Action:
+              - codebuild:StartBuild
+              - codebuild:BatchGetBuilds
+            Resource: '*'
+          - Effect: Allow
+            Action: sts:AssumeRole
             Resource:
               - !GetAtt CodePipelineSourceActionRole.Arn
-              - !GetAtt CodePipelineDeployActionRole.Arn
-        Version: '2012-10-17'
-      PolicyName: CodePipelineRoleDefaultPolicy
-      Roles:
-        - !Ref CodePipelineRole
+
   CodePipelineSourceActionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Action: sts:AssumeRole
             Effect: Allow
             Principal:
               AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
-        Version: '2012-10-17'
+
   CodePipelineSourceActionRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
+      PolicyName: CodePipelineSourceActionRoleDefaultPolicy
+      Roles:
+        - !Ref CodePipelineSourceActionRole
       PolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Action: codestar-connections:UseConnection
             Effect: Allow
             Resource: !Ref ConnectionArn
           - Action:
-              - s3:Abort*
-              - s3:DeleteObject*
-              - s3:PutObject
-              - s3:PutObjectLegalHold
-              - s3:PutObjectRetention
-              - s3:PutObjectTagging
-              - s3:PutObjectVersionTagging
-            Effect: Allow
-            Resource:
-              - !GetAtt CodePipelineArtifactsBucket.Arn
-              - !Join
-                - '/'
-                - - !GetAtt CodePipelineArtifactsBucket.Arn
-                  - '*'
-          - Action:
-              - s3:PutObjectAcl
-              - s3:PutObjectVersionAcl
-            Effect: Allow
-            Resource: !Join
-              - /
-              - - !GetAtt CodePipelineArtifactsBucket.Arn
-                - '*'
-        Version: '2012-10-17'
-      PolicyName: CodePipelineSourceActionRoleDefaultPolicy
-      Roles:
-        - !Ref CodePipelineSourceActionRole
-  CodePipelineDeployActionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
-        Version: '2012-10-17'
-  CodePipelineDeployActionRoleDefaultPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyDocument:
-        Statement:
-          - Action:
-              - cloudformation:*
-            Effect: Allow
-            Resource: '*'
-          - Action: iam:PassRole
-            Condition:
-              StringEqualsIfExists:
-                iam:PassedToService:
-                  - cloudformation.amazonaws.com
-            Effect: Allow
-            Resource: '*'
-          - Action:
-              - s3:GetBucket*
+              - s3:PutObject*
               - s3:GetObject*
-              - s3:List*
-              - s3:PutObject
-              - s3:PutObjectLegalHold
-              - s3:PutObjectRetention
-              - s3:PutObjectTagging
-              - s3:PutObjectVersionTagging
-            Effect: Allow
-            Resource:
-              - !GetAtt CodePipelineArtifactsBucket.Arn
-              - !Join
-                - '/'
-                - - !GetAtt CodePipelineArtifactsBucket.Arn
-                  - '*'
-          - Action:
-              - s3:PutObjectAcl
-              - s3:PutObjectVersionAcl
-            Effect: Allow
-            Resource: !Join
-              - /
-              - - !GetAtt CodePipelineArtifactsBucket.Arn
-                - '*'
-        Version: '2012-10-17'
-      PolicyName: CodePipelineDeployActionRoleDefaultPolicy
-      Roles:
-        - !Ref CodePipelineDeployActionRole
-  CloudFormationRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service:
-                - cloudformation.amazonaws.com
-                - codepipeline.amazonaws.com
-        Version: '2012-10-17'
-  CloudFormationRoleDefaultPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyDocument:
-        Statement:
-          - Action:
-              - cloudformation:*
-            Effect: Allow
-            Resource:
-              - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${StackName}
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Resource:
-              - !GetAtt CodePipelineRole.Arn
-          - Action:
-              - s3:GetBucket*
-              - s3:GetObject*
-              - s3:List*
-              - s3:PutObject
-              - s3:PutObjectLegalHold
-              - s3:PutObjectRetention
-              - s3:PutObjectTagging
-              - s3:PutObjectVersionTagging
-            Effect: Allow
-            Resource:
-              - !GetAtt CodePipelineArtifactsBucket.Arn
-              - !Join
-                - '/'
-                - - !GetAtt CodePipelineArtifactsBucket.Arn
-                  - '*'
-          - Action:
-              - s3:PutObjectAcl
-              - s3:PutObjectVersionAcl
-            Effect: Allow
-            Resource: !Join
-              - /
-              - - !GetAtt CodePipelineArtifactsBucket.Arn
-                - '*'
-          - Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Effect: Allow
-            Resource:
-              - !Sub
-                - arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codepipeline/${pipelineName}
-                - pipelineName: !Ref CodePipelineName
-              - !Sub
-                - arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codepipeline/${pipelineName}:*
-                - pipelineName: !Ref CodePipelineName
-        Version: '2012-10-17'
-      PolicyName: CloudFormationDefaultPolicy
-      Roles:
-        - !Ref CloudFormationRole
-  CloudFormationRoleResourceCreationPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyDocument: !Ref CloudFormationResourcePermissions
-      PolicyName: CloudFormationResourceCreationPolicy
-      Roles:
-        - !Ref CloudFormationRole
-  CodePipelineArtifactsBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: aws:kms
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-    UpdateReplacePolicy: !Ref RetentionPolicy
-    DeletionPolicy: !Ref RetentionPolicy
-  CodePipelineArtifactsBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref CodePipelineArtifactsBucket
-      PolicyDocument:
-        Statement:
-          - Action: s3:*
-            Condition:
-              Bool:
-                aws:SecureTransport: 'false'
-            Effect: Deny
-            Principal:
-              AWS: '*'
-            Resource:
-              - !GetAtt CodePipelineArtifactsBucket.Arn
-              - !Join
-                - '/'
-                - - !GetAtt CodePipelineArtifactsBucket.Arn
-                  - '*'
-        Version: '2012-10-17'
+            Resource: !Sub ${CodePipelineArtifactsBucket.Arn}/*
