@@ -84,7 +84,7 @@ Resources:
           OnFailure:
             Result: RETRY
 
-        # Stage 2: Build code using your pre-existing build project
+        # Stage 2: Build code using your 'exercise-codebuild' project
         - Name: Build
           Actions:
             - Name: CodeBuild
@@ -114,8 +114,9 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
-                # Consumes the processed template emitted from the Build phase
+                # Switched to BuildOutput since the deployment template is processed by CodeBuild
                 TemplatePath: !Sub BuildOutput::${TemplatePath}
+                # References the deployment permissions parameter directly instead of a non-existent resource
                 RoleArn: !Ref CloudFormationResourcePermissions
                 OutputFileName: !Ref OutputFileName
                 TemplateConfiguration:
@@ -261,7 +262,7 @@ Resources:
               AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
         Version: '2012-10-17'
 
-  # Completed the truncated policy block from your input
+  # Repaired and completed the trailing policy chunk from your layout input
   CodePipelineDeployActionRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
