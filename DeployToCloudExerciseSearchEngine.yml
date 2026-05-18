@@ -18,7 +18,7 @@ Parameters:
   TemplatePath:
     Description: The path to the CloudFormation template file inside the Build artifact.
     Type: String
-    Default: template.yml
+    Default: DeployToCloudExerciseSearchEngine.yml
   OutputFileName:
     Description: The path the output from the CloudFormation stack update will be written to.
     Type: String

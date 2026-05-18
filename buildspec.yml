@@ -10,5 +10,5 @@ phases:
 artifacts:
   type: zip
   files:
-    - search-function.yaml
+    - DeployToCloudExerciseSearchEngine.yaml
     - gateway.yaml
