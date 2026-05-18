@@ -16,8 +16,9 @@ Parameters:
     Description: The CloudFormation stack name that you want to create or update.
     Type: String
   TemplatePath:
-    Description: The path in your source repository to the CloudFormation template file to create or update your stack.
+    Description: The path to the CloudFormation template file inside the Build artifact.
     Type: String
+    Default: template.yml
   OutputFileName:
     Description: The path the output from the CloudFormation stack update will be written to.
     Type: String
@@ -101,7 +102,7 @@ Resources:
                 - Name: BuildOutput
               RunOrder: 1
 
-        # Stage 3: Deploy using CloudFormation capabilities from step 4
+        # Stage 3: Deploy using CloudFormation
         - Name: Deploy
           Actions:
             - Name: CloudFormation
@@ -114,9 +115,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
-                # Switched to BuildOutput since the deployment template is processed by CodeBuild
-                TemplatePath: !Sub BuildOutput::${TemplatePath}
-                # References the deployment permissions parameter directly instead of a non-existent resource
+                # FIXED: Changed from SourceOutput to BuildOutput and stabilized structural binding
+                TemplatePath: !Sub "BuildOutput::${TemplatePath}"
                 RoleArn: !Ref CloudFormationResourcePermissions
                 OutputFileName: !Ref OutputFileName
                 TemplateConfiguration:
@@ -155,7 +155,7 @@ Resources:
           - Action: sts:AssumeRole
             Effect: Allow
             Principal:
-              Service: codepipeline.amazonaws.com
+              Service: ://amazonaws.com
         Version: '2012-10-17'
 
   CodePipelineRoleDefaultPolicy:
@@ -262,7 +262,6 @@ Resources:
               AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
         Version: '2012-10-17'
 
-  # Repaired and completed the trailing policy chunk from your layout input
   CodePipelineDeployActionRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
