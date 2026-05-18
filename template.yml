@@ -372,4 +372,3 @@ Resources:
                 - - !GetAtt CodePipelineArtifactsBucket.Arn
                   - '*'
         Version: '2012-10-17'
-
