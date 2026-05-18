@@ -15,7 +15,7 @@ Parameters:
   CodePipelineName:
     Description: Name for this specific deployment pipeline.
     Type: String
-    Default: DeployToCloudFormationService
+    Default: DeployExercise-4
   StackName:
     Description: The CloudFormation stack name that will create or update your Lambda function.
     Type: String
