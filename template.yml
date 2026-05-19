@@ -2,30 +2,35 @@ Parameters:
   ConnectionArn:
     Description: The CodeConnections ARN for your source repository.
     Type: String
+    Default: "arn:aws:codeconnections:us-east-1:494344660287:connection/b1bd9387-1b32-49ef-bcff-3f33c64de645" # e.g., arn:aws:codeconnections:us-east-1:123456789012:connection/...
   FullRepositoryId:
     Description: The full repository ID to use with your CodeConnections connection.
     Type: String
+    Default: "julianandres42/search-function"
   BranchName:
     Description: The branch name to use with your CodeConnections connection.
     Type: String
+    Default: "main"
   CodePipelineName:
     Description: The CodePipeline pipeline name that will deploy to your CloudFormation stack.
     Type: String
-    Default: DeployToCloudFormationService
+    Default: "DeployToCloudFormationService"
   StackName:
     Description: The CloudFormation stack name that you want to create or update.
     Type: String
+    Default: "SearchEngineApplicationStack"
   TemplatePath:
     Description: The path in your source repository to the CloudFormation template file to create or update your stack.
     Type: String
-    Default: template.yml
+    Default: "template.yml"
   OutputFileName:
     Description: The path the output from the CloudFormation stack update will be written to.
     Type: String
-    Default: output.json
+    Default: "output.json"
   CloudFormationResourcePermissions:
     Description: The permission required by CloudFormation to make resource calls on your behalf.
     Type: String
+    Default: "arn:aws:iam::494344660287:role/aws-service-role/opensearchservice.amazonaws.com/AWSServiceRoleForAmazonOpenSearchService" # e.g., arn:aws:iam::123456789012:role/TuRolDeDespliegue
   RetentionPolicy:
     Description: Define if you'd like the resource retained or deleted when the CloudFormation stack is deleted.
     Type: String
@@ -120,7 +125,7 @@ Resources:
                 TemplateConfiguration:
                   !If [HasTemplateConfiguration, !Sub "BuildOutput::${TemplateConfiguration}", !Ref "AWS::NoValue"]
 
-                # FIXED: This block passes the parameter values down to the inner template execution
+                # Passes parameter values down into your application stack seamlessly
                 ParameterOverrides: !Sub |
                   {
                     "ConnectionArn": "${ConnectionArn}",
