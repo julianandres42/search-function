@@ -15,12 +15,16 @@ Parameters:
     Description: The CodePipeline pipeline name that will deploy to your CloudFormation stack.
     Type: String
     Default: DeployCloudFormationPipeline
+  CodeBuildProjectName:
+    Description: The name of the existing CodeBuild project.
+    Type: String
+    Default: exercise-codebuild
   StackName:
     Description: The CloudFormation stack name that you want to create or update.
     Type: String
     Default: DeployCloudFormationStack
   TemplatePath:
-    Description: The path in your source repository to the CloudFormation template file to create or update your stack.
+    Description: The path in your build artifact to the CloudFormation template file to create or update your stack.
     Type: String
     Default: template.yaml
   OutputFileName:
@@ -43,10 +47,8 @@ Parameters:
           }
         ]
       }
-
   RetentionPolicy:
-    Description: Define if you'd like the resource retained or deleted when the
-      CloudFormation stack is deleted.
+    Description: Define if you'd like the resource retained or deleted when the CloudFormation stack is deleted.
     Type: String
     Default: Delete
     AllowedValues:
@@ -60,9 +62,11 @@ Parameters:
     Description: A JSON string to provide parameter values that override defaults in the template or TemplateConfiguration file.
     Type: String
     Default: ''
+
 Conditions:
   HasTemplateConfiguration: !Not [!Equals ['', !Ref TemplateConfiguration]]
   HasParameterOverrides: !Not [!Equals ['', !Ref ParameterOverrides]]
+
 Resources:
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -93,6 +97,25 @@ Resources:
               RunOrder: 1
           OnFailure:
             Result: RETRY
+
+        - Name: Build
+          Actions:
+            - Name: RunExerciseBuild
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref CodeBuildProjectName
+              InputArtifacts:
+                - Name: SourceOutput
+              OutputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 1
+          OnFailure:
+            Result: FAIL
+
         - Name: Deploy
           Actions:
             - Name: CloudFormation
@@ -105,15 +128,15 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 Capabilities: CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM
                 StackName: !Ref StackName
-                TemplatePath: !Sub SourceOutput::${TemplatePath}
+                TemplatePath: !Sub BuildOutput::${TemplatePath}
                 RoleArn: !GetAtt CloudFormationRole.Arn
                 OutputFileName: !Ref OutputFileName
                 TemplateConfiguration:
-                  !If [HasTemplateConfiguration, !Sub "SourceOutput::${TemplateConfiguration}", !Ref "AWS::NoValue"]
+                  !If [HasTemplateConfiguration, !Sub "BuildOutput::${TemplateConfiguration}", !Ref "AWS::NoValue"]
                 ParameterOverrides:
                   !If [HasParameterOverrides, !Ref ParameterOverrides, !Ref "AWS::NoValue"]
               InputArtifacts:
-                - Name: SourceOutput
+                - Name: BuildOutput
               OutputArtifacts:
                 - Name: DeployOutput
               RoleArn: !GetAtt CodePipelineDeployActionRole.Arn
@@ -135,6 +158,7 @@ Resources:
                       TimeZone: 'PST'
     DependsOn:
       - CodePipelineRoleDefaultPolicy
+
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -145,6 +169,7 @@ Resources:
             Principal:
               Service: codepipeline.amazonaws.com
         Version: '2012-10-17'
+
   CodePipelineRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -181,10 +206,17 @@ Resources:
             Resource:
               - !GetAtt CodePipelineSourceActionRole.Arn
               - !GetAtt CodePipelineDeployActionRole.Arn
+          - Action:
+              - build:BatchGetBuilds
+              - build:StartBuild
+              - build:BatchGetProjects
+            Effect: Allow
+            Resource: !Sub arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:project/${CodeBuildProjectName}
         Version: '2012-10-17'
       PolicyName: CodePipelineRoleDefaultPolicy
       Roles:
         - !Ref CodePipelineRole
+
   CodePipelineSourceActionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -195,6 +227,7 @@ Resources:
             Principal:
               AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
         Version: '2012-10-17'
+
   CodePipelineSourceActionRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -230,6 +263,7 @@ Resources:
       PolicyName: CodePipelineSourceActionRoleDefaultPolicy
       Roles:
         - !Ref CodePipelineSourceActionRole
+
   CodePipelineDeployActionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -240,6 +274,7 @@ Resources:
             Principal:
               AWS: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
         Version: '2012-10-17'
+
   CodePipelineDeployActionRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -284,6 +319,7 @@ Resources:
       PolicyName: CodePipelineDeployActionRoleDefaultPolicy
       Roles:
         - !Ref CodePipelineDeployActionRole
+
   CloudFormationRole:
     Type: AWS::IAM::Role
     Properties:
@@ -296,6 +332,7 @@ Resources:
                 - cloudformation.amazonaws.com
                 - codepipeline.amazonaws.com
         Version: '2012-10-17'
+
   CloudFormationRoleDefaultPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -350,6 +387,7 @@ Resources:
       PolicyName: CloudFormationDefaultPolicy
       Roles:
         - !Ref CloudFormationRole
+
   CloudFormationRoleResourceCreationPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -357,6 +395,7 @@ Resources:
       PolicyName: CloudFormationResourceCreationPolicy
       Roles:
         - !Ref CloudFormationRole
+
   CodePipelineArtifactsBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -371,6 +410,7 @@ Resources:
         RestrictPublicBuckets: true
     UpdateReplacePolicy: !Ref RetentionPolicy
     DeletionPolicy: !Ref RetentionPolicy
+
   CodePipelineArtifactsBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
