@@ -136,7 +136,7 @@ Resources:
                 - Name: BuildOutput
               OutputArtifacts:
                 - Name: DeployOutput
-              RoleArn: !GetAtt CodePipelineDeployActionRole.Arn
+              #RoleArn: !GetAtt CodePipelineDeployActionRole.Arn
               RunOrder: 1
           OnFailure:
             Result: ROLLBACK
