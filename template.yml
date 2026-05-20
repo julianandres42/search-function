@@ -113,9 +113,6 @@ Resources:
               OutputArtifacts:
                 - Name: BuildOutput
               RunOrder: 1
-          OnFailure:
-            Result: FAIL
-
         - Name: Deploy
           Actions:
             - Name: CloudFormation
