@@ -6,9 +6,11 @@ Parameters:
   FullRepositoryId:
     Description: The full repository ID to use with your CodeConnections connection.
     Type: String
+    Default: julianandres42/search-function
   BranchName:
     Description: The branch name to use with your CodeConnections connection.
     Type: String
+    Default: main
   CodePipelineName:
     Description: The CodePipeline pipeline name that will deploy to your CloudFormation stack.
     Type: String
@@ -16,6 +18,7 @@ Parameters:
   StackName:
     Description: The CloudFormation stack name that you want to create or update.
     Type: String
+    Default: DeployToCloudFormationServiceStack
   TemplatePath:
     Description: The path in your source repository to the CloudFormation template file to create or update your stack.
     Type: String
@@ -27,6 +30,19 @@ Parameters:
   CloudFormationResourcePermissions:
     Description: The permission required by CloudFormation to make resource calls on your behalf.
     Type: String
+    Default: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "cloudformation:*"
+            ],
+            "Resource": "*"
+          }
+        ]
+      }
   RetentionPolicy:
     Description: Define if you'd like the resource retained or deleted when the
       CloudFormation stack is deleted.
