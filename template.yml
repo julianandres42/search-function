@@ -18,6 +18,7 @@ Parameters:
   TemplatePath:
     Description: The path in your source repository to the CloudFormation template file to create or update your stack.
     Type: String
+    Default: template.yaml
   OutputFileName:
     Description: The path the output from the CloudFormation stack update will be written to.
     Type: String
