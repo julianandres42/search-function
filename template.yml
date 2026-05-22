@@ -14,7 +14,6 @@ Parameters:
   CodePipelineName:
     Description: The CodePipeline pipeline name that will deploy to your CloudFormation stack.
     Type: String
-    Default: StackForExerciseOne
   StackName:
     Description: The CloudFormation stack name that you want to create or update.
     Type: String
@@ -70,7 +69,6 @@ Resources:
         Location: !Ref CodePipelineArtifactsBucket
         Type: S3
       ExecutionMode: QUEUED
-      Name: !Ref CodePipelineName
       PipelineType: V2
       RoleArn: !GetAtt CodePipelineRole.Arn
       Stages:
