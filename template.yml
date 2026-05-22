@@ -18,8 +18,7 @@ Parameters:
   StackName:
     Description: The CloudFormation stack name that you want to create or update.
     Type: String
-    Default: SearchFunctionStack
-    Default: SearchFunctionStack
+    Default: SearchFunctionStackFromScratch
   TemplatePath:
     Description: The path in your source repository to the CloudFormation template file to create or update your stack.
     Type: String
