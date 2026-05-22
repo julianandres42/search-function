@@ -10,5 +10,4 @@ phases:
 artifacts:
   type: zip
   files:
-    - gateway.yaml
-    - template.yaml
+    - '**/*'
