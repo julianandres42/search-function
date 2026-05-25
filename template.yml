@@ -75,7 +75,7 @@ Resources:
         Location: !Ref CodePipelineArtifactsBucket
         Type: S3
       ExecutionMode: QUEUED
-      Name: !Ref DeployToCloudFormationService
+      Name: !Ref CodePipelineName
       PipelineType: V2
       RoleArn: !GetAtt CodePipelineRole.Arn
       Stages:
