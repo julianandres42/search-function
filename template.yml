@@ -14,7 +14,7 @@ Parameters:
   CodePipelineName:
     Description: The CodePipeline pipeline name that will deploy to your CloudFormation stack.
     Type: String
-    Default: DeployToCloudFormationService
+    Default: DeployToCloudFormationServiceEx1
   StackName:
     Description: The CloudFormation stack name that you want to create or update.
     Type: String
