@@ -17,7 +17,3 @@ phases:
     commands:
       - echo "Deploying a AWS Lambda..."
       - aws lambda update-function-code --function-name search-function --zip-file fileb://deployment.zip
-
-artifacts:
-  - template.yaml
-  - deployment.zip
