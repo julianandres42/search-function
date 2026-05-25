@@ -2,12 +2,15 @@ Parameters:
   ConnectionArn:
     Description: The CodeConnections ARN for your source repository.
     Type: String
+    Default: arn:aws:codeconnections:us-east-1:494344660287:connection/b1bd9387-1b32-49ef-bcff-3f33c64de645
   FullRepositoryId:
     Description: The full repository ID to use with your CodeConnections connection.
     Type: String
+    Default: julianandres42/search-function
   BranchName:
     Description: The branch name to use with your CodeConnections connection.
     Type: String
+    Default: main
   CodePipelineName:
     Description: The CodePipeline pipeline name that will deploy to your CloudFormation stack.
     Type: String
@@ -15,9 +18,11 @@ Parameters:
   StackName:
     Description: The CloudFormation stack name that you want to create or update.
     Type: String
+    Default: SearchGatewayStack
   TemplatePath:
     Description: The path in your source repository to the CloudFormation template file to create or update your stack.
     Type: String
+    Default: template.yaml
   OutputFileName:
     Description: The path the output from the CloudFormation stack update will be written to.
     Type: String
@@ -52,7 +57,7 @@ Resources:
         Location: !Ref CodePipelineArtifactsBucket
         Type: S3
       ExecutionMode: QUEUED
-      Name: !Ref CodePipelineName
+      Name: !Ref DeployToCloudFormationService
       PipelineType: V2
       RoleArn: !GetAtt CodePipelineRole.Arn
       Stages:
