@@ -165,6 +165,7 @@ Resources:
               - s3:PutObjectRetention
               - s3:PutObjectTagging
               - s3:PutObjectVersionTagging
+              - s3:PutObjectAcl
             Effect: Allow
             Resource:
               - !GetAtt CodePipelineArtifactsBucket.Arn
@@ -215,6 +216,7 @@ Resources:
               - s3:PutObjectRetention
               - s3:PutObjectTagging
               - s3:PutObjectVersionTagging
+              - s3:PutObjectAcl
             Effect: Allow
             Resource:
               - !GetAtt CodePipelineArtifactsBucket.Arn
@@ -269,6 +271,7 @@ Resources:
               - s3:PutObjectRetention
               - s3:PutObjectTagging
               - s3:PutObjectVersionTagging
+              - s3:PutObjectAcl
             Effect: Allow
             Resource:
               - !GetAtt CodePipelineArtifactsBucket.Arn
@@ -323,6 +326,7 @@ Resources:
               - s3:PutObjectRetention
               - s3:PutObjectTagging
               - s3:PutObjectVersionTagging
+              - s3:PutObjectAcl
             Effect: Allow
             Resource:
               - !GetAtt CodePipelineArtifactsBucket.Arn
