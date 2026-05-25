@@ -63,11 +63,12 @@ Conditions:
   HasTemplateConfiguration: !Not [!Equals ['', !Ref TemplateConfiguration]]
   HasParameterOverrides: !Not [!Equals ['', !Ref ParameterOverrides]]
 Resources:
+
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
       ArtifactStore:
-        Location: !Ref CodePipelineArtifactsBucket
+        Location: !Ref my-artifacts-pipeline-lambda-unique-123
         Type: S3
       ExecutionMode: QUEUED
       PipelineType: V2
