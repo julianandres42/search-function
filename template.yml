@@ -117,7 +117,7 @@ Resources:
                 ParameterOverrides:
                   !If [HasParameterOverrides, !Ref ParameterOverrides, !Ref "AWS::NoValue"]
               InputArtifacts:
-                - Name: SourceOutput
+                - Name: BuildArtifact
               OutputArtifacts:
                 - Name: DeployOutput
               RoleArn: !GetAtt CodePipelineDeployActionRole.Arn
