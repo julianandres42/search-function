@@ -132,7 +132,7 @@ Resources:
                 RoleArn: !GetAtt CloudFormationRole.Arn
                 OutputFileName: !Ref OutputFileName
                 TemplateConfiguration:
-                  !If [HasTemplateConfiguration, !Sub "SourceOutput::${TemplateConfiguration}", !Ref "AWS::NoValue"]
+                  !If [HasTemplateConfiguration, !Sub "BuildOutput::${TemplateConfiguration}", !Ref "AWS::NoValue"]
                 ParameterOverrides:
                   !If [HasParameterOverrides, !Ref ParameterOverrides, !Ref "AWS::NoValue"]
               InputArtifacts:
@@ -292,6 +292,7 @@ Resources:
               - s3:PutObjectTagging
               - s3:PutObjectVersionTagging
               - s3:PutObjectAcl
+              - s3:ListBucket
             Effect: Allow
             Resource:
               - !GetAtt CodePipelineArtifactsBucket.Arn
