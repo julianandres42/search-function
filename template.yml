@@ -30,6 +30,24 @@ Parameters:
   CloudFormationResourcePermissions:
     Description: The permission required by CloudFormation to make resource calls on your behalf.
     Type: String
+    Default: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "cloudformation:CreateStack",
+              "cloudformation:DeleteStack",
+              "cloudformation:UpdateStack",
+              "cloudformation:DescribeStacks",
+              "cloudformation:DescribeStackEvents",
+              "cloudformation:GetTemplateSummary"
+            ],
+            "Resource": "*"
+          }
+        ]
+      }
   RetentionPolicy:
     Description: Define if you'd like the resource retained or deleted when the
       CloudFormation stack is deleted.
