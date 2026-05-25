@@ -2,27 +2,22 @@ Parameters:
   ConnectionArn:
     Description: The CodeConnections ARN for your source repository.
     Type: String
-    Default: arn:aws:codeconnections:us-east-1:494344660287:connection/b1bd9387-1b32-49ef-bcff-3f33c64de645
   FullRepositoryId:
     Description: The full repository ID to use with your CodeConnections connection.
     Type: String
-    Default: julianandres42/search-function
   BranchName:
     Description: The branch name to use with your CodeConnections connection.
     Type: String
-    Default: main
   CodePipelineName:
     Description: The CodePipeline pipeline name that will deploy to your CloudFormation stack.
     Type: String
-    Default: CodePipelineForExerciseOnesf232322
+    Default: DeployToCloudFormationService
   StackName:
     Description: The CloudFormation stack name that you want to create or update.
     Type: String
-    Default: SearchFunctionStackFromScratch
   TemplatePath:
     Description: The path in your source repository to the CloudFormation template file to create or update your stack.
     Type: String
-    Default: template.yaml
   OutputFileName:
     Description: The path the output from the CloudFormation stack update will be written to.
     Type: String
@@ -30,19 +25,6 @@ Parameters:
   CloudFormationResourcePermissions:
     Description: The permission required by CloudFormation to make resource calls on your behalf.
     Type: String
-    Default: |
-      {
-        "Version": "2012-10-17",
-        "Statement": [
-          {
-            "Effect": "Allow",
-            "Action": [
-              "cloudformation:*"
-            ],
-            "Resource": "*"
-          }
-        ]
-      }
   RetentionPolicy:
     Description: Define if you'd like the resource retained or deleted when the
       CloudFormation stack is deleted.
@@ -63,14 +45,14 @@ Conditions:
   HasTemplateConfiguration: !Not [!Equals ['', !Ref TemplateConfiguration]]
   HasParameterOverrides: !Not [!Equals ['', !Ref ParameterOverrides]]
 Resources:
-
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
       ArtifactStore:
-        Location: my-artifacts-pipeline-lambda-unique-123
+        Location: !Ref CodePipelineArtifactsBucket
         Type: S3
       ExecutionMode: QUEUED
+      Name: !Ref CodePipelineName
       PipelineType: V2
       RoleArn: !GetAtt CodePipelineRole.Arn
       Stages:
