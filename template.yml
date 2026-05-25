@@ -68,7 +68,7 @@ Resources:
     Type: AWS::CodePipeline::Pipeline
     Properties:
       ArtifactStore:
-        Location: !Ref my-artifacts-pipeline-lambda-unique-123
+        Location: my-artifacts-pipeline-lambda-unique-123
         Type: S3
       ExecutionMode: QUEUED
       PipelineType: V2
