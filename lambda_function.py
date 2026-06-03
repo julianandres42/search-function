@@ -9,8 +9,8 @@ region = 'ap-northeast-1'
 service = 'es'
 credentials = boto3.Session().get_credentials()
 awsauth = AWS4Auth(credentials.access_key, credentials.secret_key, region, service, session_token=credentials.token)
-host = 'https://search-mygoogle-74xgfxo3qbqg4mmm5zzt3a3uye.ap-northeast-1.es.amazonaws.com'
-index = 'mygoogle'
+host = 'https://search-searchenginedomain-ja7b6tj7jgl2aeid6bad3pbhc4.aos.us-east-1.on.aws'
+index = 'searchengineindex'
 url = host + '/' + index + '/_search'
 def get_from_Search(query):
     
